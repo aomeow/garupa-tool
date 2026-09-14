@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ガルパ ポイント調整ツール</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+            background-color: #f4f7f6;
+            color: #333;
+            margin: 0;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            background-color: #ffffff;
+            border-top: 6px solid #1e365c;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            padding: 25px;
+            box-sizing: border-box;
+        }
+        h2 {
+            color: #1e365c;
+            text-align: center;
+            border-bottom: 2px solid #d4af37;
+            padding-bottom: 10px;
+            margin-top: 0;
+            font-size: 1.3rem;
+        }
+        .input-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #444;
+        }
+        input[type="number"], select {
+            width: 100%;
+            padding: 12px 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 16px; 
+            background-color: #fafafa;
+        }
+        select:disabled {
+            background-color: #e9ecef;
+            color: #6c757d;
+            cursor: not-allowed;
+            border-color: #ced4da;
+        }
+        button {
+            width: 100%;
+            background-color: #1e365c;
+            color: #ffffff;
+            border: none;
+            padding: 15px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            margin-top: 10px;
+            box-shadow: 0 2px 4px rgba(30, 54, 92, 0.3);
+        }
+        button:hover {
+            background-color: #d4af37;
+            color: #1e365c;
+        }
+        #result-area {
+            margin-top: 25px;
+            display: none;
+        }
+        
+        /* カードデザイン */
+        .result-card {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            padding: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+        }
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #f4f7f6;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #1e365c;
+        }
+        .card-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 6px;
+            font-size: 14px;
+        }
+        .card-details {
+            background-color: #f9fbfb;
+            padding: 10px;
+            border-radius: 6px;
+            margin: 10px 0;
+            font-size: 13px;
+        }
+        .status-ok {
+            background-color: #c8e6c9;
+            color: #2e7d32;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .status-ng {
+            background-color: #ffcdd2;
+            color: #c62828;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        .highlight-pt {
+            font-size: 16px;
+            font-weight: bold;
+            color: #d32f2f;
+        }
+        .error-msg {
+            color: #d32f2f;
+            background-color: #ffebee;
+            padding: 15px;
+            border-radius: 4px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 14px;
+        }
+
+        /* フッター用デザイン */
+        .footer {
+            text-align: center;
+            margin-top: 25px;
+            padding-top: 15px;
+            border-top: 1px dashed #e0e0e0;
+            font-size: 13px;
+            color: #666;
+        }
+        .footer a {
+            color: #1e365c;
+            text-decoration: none;
+            font-weight: bold;
+            transition: color 0.2s;
+        }
+        .footer a:hover {
+            color: #d4af37;
+        }
+        
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>イベントポイント調整</h2>
+
+    <div class="input-group">
+        <label for="event-type">イベント形式</label>
+        <select id="event-type" onchange="toggleInputs()">
+            <option value="mission">ミッションライブイベント</option>
+            <option value="try">ライブトライ！イベント</option>
+            <option value="challenge">チャレンジライブイベント</option>
+            <option value="versus">対バンライブイベント</option>
+            <option value="medley">メドレーライブイベント</option>
+        </select>
+    </div>
+
+    <div class="input-group" id="live-mode-group">
+        <label for="live-mode">ライブ形式</label>
+        <select id="live-mode" onchange="toggleInputs()">
+            <option value="free">フリーライブ</option>
+        </select>
+    </div>
+
+    <!-- メドレー専用 曲数選択 -->
+    <div class="input-group" id="medley-songs-group" style="display: none;">
+        <label for="medley-songs">メドレー曲数</label>
+        <select id="medley-songs" onchange="toggleInputs()">
+            <option value="1" selected>1曲</option>
+            <option value="2">2曲</option>
+            <option value="3">3曲</option>
+        </select>
+    </div>
+
+    <div class="input-group" id="contribution-group">
+        <label for="contribution">貢献度</label>
+        <select id="contribution">
+            <option value="200">1位 (貢献 200Pt)</option>
+            <option value="173">2位 (貢献 173Pt)</option>
+            <option value="146">3位 (貢献 146Pt)</option>
+            <option value="123">4位 (貢献 123Pt)</option>
+            <option value="100" selected>5位 (貢献 100Pt)</option>
+        </select>
+    </div>
+
+    <div class="input-group" id="bonus-group" style="display: none;">
+        <label for="event-bonus">イベントボーナス (%)</label>
+        <input type="number" id="event-bonus" value="0">
+    </div>
+
+    <div class="input-group" id="support-group" style="display: none;">
+        <label for="mission-support">サポートバンド総合力</label>
+        <input type="number" id="mission-support" placeholder="例: 250000">
+    </div>
+
+    <!-- 通常イベント専用 ブースト選択 -->
+    <div class="input-group" id="normal-boost-group">
+        <label for="boost" id="boost-label">消費ブースト数</label>
+        <select id="boost" data-boost-type="boost">
+            <option value="1" selected>0ブースト (1倍)</option>
+            <option value="5">1ブースト (5倍)</option>
+            <option value="10">2ブースト (10倍)</option>
+            <option value="15">3ブースト (15倍)</option>
+            <option value="40">10ブースト (40倍)</option>
+        </select>
+    </div>
+
+    <!-- メドレー専用 ブースト選択 -->
+    <div class="input-group" id="medley-boost-group" style="display: none;">
+        <label>各曲の消費ブースト数</label>
+        <div style="background-color: #fafafa; padding: 10px; border: 1px solid #ccc; border-radius: 4px;">
+            <div style="display: flex; gap: 10px; margin-bottom: 8px; align-items: center;" id="medley-b1-wrap">
+                <span style="font-size:13px; font-weight:bold; color:#444; white-space: nowrap; width: 45px;">1曲目:</span>
+                <select id="medley-boost-1" style="margin: 0; padding: 8px;">
+                    <option value="1" selected>0ブースト (1倍)</option>
+                    <option value="5">1ブースト (5倍)</option>
+                    <option value="10">2ブースト (10倍)</option>
+                    <option value="15">3ブースト (15倍)</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; margin-bottom: 8px; align-items: center;" id="medley-b2-wrap">
+                <span style="font-size:13px; font-weight:bold; color:#444; white-space: nowrap; width: 45px;">2曲目:</span>
+                <select id="medley-boost-2" style="margin: 0; padding: 8px;">
+                    <option value="1" selected>0ブースト (1倍)</option>
+                    <option value="5">1ブースト (5倍)</option>
+                    <option value="10">2ブースト (10倍)</option>
+                    <option value="15">3ブースト (15倍)</option>
+                </select>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center;" id="medley-b3-wrap">
+                <span style="font-size:13px; font-weight:bold; color:#444; white-space: nowrap; width: 45px;">3曲目:</span>
+                <select id="medley-boost-3" style="margin: 0; padding: 8px;">
+                    <option value="1" selected>0ブースト (1倍)</option>
+                    <option value="5">1ブースト (5倍)</option>
+                    <option value="10">2ブースト (10倍)</option>
+                    <option value="15">3ブースト (15倍)</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="input-group">
+        <label for="live-count">ライブの回数</label>
+        <input type="number" id="live-count" value="1" min="1">
+    </div>
+
+    <div class="input-group">
+        <label for="current-pt">現在のポイント (Pt)</label>
+        <input type="number" id="current-pt" placeholder="例: 100500">
+    </div>
+
+    <div class="input-group">
+        <label for="target-pt">目標のポイント (Pt)</label>
+        <input type="number" id="target-pt" placeholder="例: 100915">
+    </div>
+
+    <button onclick="calculateScore()">計算する</button>
+
+    <div id="result-area"></div>
+
+    <div class="footer">
+        開発・お問い合わせ : <a href="https://x.com/aomeow22" target="_blank" rel="noopener noreferrer">@aomeow22</a>
+    </div>
+
+</div>
+
+<script>
+    function toggleInputs() {
+        const eventType = document.getElementById("event-type").value;
+        const liveModeSelect = document.getElementById("live-mode");
+        const liveModeGroup = document.getElementById("live-mode-group");
+        const contribGroup = document.getElementById("contribution-group");
+        const bonusGroup = document.getElementById("bonus-group");
+        const supportGroup = document.getElementById("support-group");
+        const normalBoostGroup = document.getElementById("normal-boost-group");
+        const boostSelect = document.getElementById("boost");
+        const boostLabel = document.getElementById("boost-label");
+        const medleySongsGroup = document.getElementById("medley-songs-group");
+        const medleyBoostGroup = document.getElementById("medley-boost-group");
+
+        // ライブ形式の切り替え
+        if (liveModeSelect.getAttribute("data-event-type") !== eventType) {
+            let currentLiveMode = liveModeSelect.value;
+            liveModeSelect.innerHTML = ""; 
+            
+            if (eventType === "versus") {
+                liveModeSelect.innerHTML = '<option value="free">フリーライブ</option><option value="versus">対バンライブ</option>';
+            } else if (eventType === "challenge") {
+                liveModeSelect.innerHTML = '<option value="free">フリーライブ</option><option value="challenge_live">チャレンジライブ</option>';
+            } else if (eventType === "medley") {
+                liveModeSelect.innerHTML = '<option value="medley_live">メドレーライブ</option>';
+            } else {
+                liveModeSelect.innerHTML = '<option value="free">フリーライブ</option>';
+            }
+            
+            if (liveModeSelect.querySelector(`option[value="${currentLiveMode}"]`)) {
+                liveModeSelect.value = currentLiveMode;
+            }
+            liveModeSelect.setAttribute("data-event-type", eventType);
+        }
+
+        const liveMode = liveModeSelect.value;
+
+        // チャレンジライブと通常ブーストの切り替え
+        const currentBoostType = boostSelect.getAttribute("data-boost-type");
+        if (eventType === "challenge" && liveMode === "challenge_live") {
+            if (currentBoostType !== "cp") {
+                boostLabel.innerText = "消費チャレンジP";
+                boostSelect.innerHTML = `
+                    <option value="1" selected>CP 200 (1倍)</option>
+                    <option value="2">CP 400 (2倍)</option>
+                    <option value="4">CP 800 (4倍)</option>
+                    <option value="8">CP 1600 (8倍)</option>
+                `;
+                boostSelect.setAttribute("data-boost-type", "cp");
+            }
+        } else {
+            if (currentBoostType !== "boost") {
+                boostLabel.innerText = "消費ブースト数";
+                boostSelect.innerHTML = `
+                    <option value="1" selected>0ブースト (1倍)</option>
+                    <option value="5">1ブースト (5倍)</option>
+                    <option value="10">2ブースト (10倍)</option>
+                    <option value="15">3ブースト (15倍)</option>
+                    <option value="40">10ブースト (40倍)</option>
+                `;
+                boostSelect.setAttribute("data-boost-type", "boost");
+            }
+        }
+
+        // 入力グループ全体の表示・非表示
+        if (eventType === "mission") {
+            liveModeGroup.style.display = "block";
+            liveModeSelect.disabled = true;
+            contribGroup.style.display = "none";
+            bonusGroup.style.display = "block";
+            supportGroup.style.display = "block";
+            normalBoostGroup.style.display = "block";
+            medleySongsGroup.style.display = "none";
+            medleyBoostGroup.style.display = "none";
+        } else if (eventType === "try") {
+            liveModeGroup.style.display = "block";
+            liveModeSelect.disabled = true;
+            contribGroup.style.display = "none";
+            bonusGroup.style.display = "block";
+            supportGroup.style.display = "none";
+            normalBoostGroup.style.display = "block";
+            medleySongsGroup.style.display = "none";
+            medleyBoostGroup.style.display = "none";
+        } else if (eventType === "versus") {
+            liveModeGroup.style.display = "block";
+            liveModeSelect.disabled = false;
+            bonusGroup.style.display = "none";
+            supportGroup.style.display = "none";
+            contribGroup.style.display = liveMode === "free" ? "none" : "block";
+            normalBoostGroup.style.display = "block";
+            medleySongsGroup.style.display = "none";
+            medleyBoostGroup.style.display = "none";
+        } else if (eventType === "challenge") {
+            liveModeGroup.style.display = "block";
+            liveModeSelect.disabled = false;
+            contribGroup.style.display = "none";
+            supportGroup.style.display = "none";
+            bonusGroup.style.display = liveMode === "free" ? "block" : "none";
+            normalBoostGroup.style.display = "block";
+            medleySongsGroup.style.display = "none";
+            medleyBoostGroup.style.display = "none";
+        } else if (eventType === "medley") {
+            liveModeGroup.style.display = "block";
+            liveModeSelect.disabled = true;
+            contribGroup.style.display = "none";
+            supportGroup.style.display = "none";
+            bonusGroup.style.display = "none"; 
+            normalBoostGroup.style.display = "none"; 
+            medleySongsGroup.style.display = "block";
+            medleyBoostGroup.style.display = "block";
+
+            // 曲数に応じたブースト欄の表示制御
+            const medleySongs = parseInt(document.getElementById("medley-songs").value, 10);
+            document.getElementById("medley-b1-wrap").style.display = "flex";
+            document.getElementById("medley-b2-wrap").style.display = medleySongs >= 2 ? "flex" : "none";
+            document.getElementById("medley-b3-wrap").style.display = medleySongs >= 3 ? "flex" : "none";
+        }
+    }
+    
+    toggleInputs();
+
+    function calculateScore() {
+        const eventType = document.getElementById("event-type").value;
+        const liveMode = document.getElementById("live-mode").value;
+        const liveCount = parseInt(document.getElementById("live-count").value, 10);
+        const currentPt = parseInt(document.getElementById("current-pt").value, 10);
+        const targetPt = parseInt(document.getElementById("target-pt").value, 10);
+        const resultArea = document.getElementById("result-area");
+
+        // ブースト倍率の取得
+        let boostMulti = 0;
+        if (eventType === "medley") {
+            const medleySongs = parseInt(document.getElementById("medley-songs").value, 10);
+            boostMulti += parseInt(document.getElementById("medley-boost-1").value, 10);
+            if (medleySongs >= 2) boostMulti += parseInt(document.getElementById("medley-boost-2").value, 10);
+            if (medleySongs >= 3) boostMulti += parseInt(document.getElementById("medley-boost-3").value, 10);
+        } else {
+            boostMulti = parseInt(document.getElementById("boost").value, 10);
+        }
+
+        const isChallengeLive = (eventType === "challenge" && liveMode === "challenge_live");
+
+        if (isNaN(currentPt) || isNaN(targetPt) || isNaN(liveCount) || liveCount < 1) {
+            resultArea.style.display = "block";
+            resultArea.innerHTML = '<div class="error-msg">未入力の項目があるか、数値が正しくありません。</div>';
+            return;
+        }
+
+        const needPt = targetPt - currentPt;
+
+        if (needPt <= 0) {
+            resultArea.style.display = "block";
+            resultArea.innerHTML = '<div class="error-msg">既に目標ポイントに到達しています。</div>';
+            return;
+        }
+
+        if (needPt % boostMulti !== 0) {
+            let errorText = "";
+            if (eventType === "medley") {
+                errorText = needPt.toLocaleString() + ' Pt は ブースト合計倍率 (' + boostMulti + '倍) では割り切れないため、調整できません。';
+            } else if (isChallengeLive) {
+                let cpVal = boostMulti * 200;
+                errorText = needPt.toLocaleString() + ' Pt は 消費CP ' + cpVal + ' (' + boostMulti + '倍) では割り切れないため、調整できません。';
+            } else {
+                let boostName = "0";
+                if(boostMulti === 5) boostName = "1";
+                if(boostMulti === 10) boostName = "2";
+                if(boostMulti === 15) boostName = "3";
+                if(boostMulti === 40) boostName = "10";
+                errorText = needPt.toLocaleString() + ' Pt は ' + boostName + 'ブースト(' + boostMulti + '倍) では割り切れないため、調整できません。';
+            }
+            
+            resultArea.style.display = "block";
+            resultArea.innerHTML = '<div class="error-msg">' + errorText + '</div>';
+            return;
+        }
+
+        const totalBasePt = needPt / boostMulti;
+
+        let basePtsPerLive = new Array(liveCount).fill(Math.floor(totalBasePt / liveCount));
+        let remainderBase = totalBasePt % liveCount;
+        for(let i = 0; i < remainderBase; i++) {
+            basePtsPerLive[i]++;
+        }
+
+        let cardsHTML = "";
+        let remainingPt = needPt;
+
+        for(let i = 0; i < liveCount; i++) {
+            let currentBase = basePtsPerLive[i];
+            let currentTargetPt = currentBase * boostMulti;
+            
+            let minScore = 0;
+            let maxScore = 0;
+            let displayMin = "-";
+            let displayMax = "-";
+            let isAdjustable = true;
+            let details = [];
+
+            if (eventType === "versus") {
+                let needBonusPt = 0;
+
+                if (liveMode === "free") {
+                    needBonusPt = currentBase - 100;
+                    details.push({ label: "基本P", value: "100 pts" });
+                } else {
+                    let currentContribution = parseInt(document.getElementById("contribution").value, 10);
+                    needBonusPt = currentBase - currentContribution;
+                    details.push({ label: "貢献度P", value: currentContribution + " pts" });
+                }
+
+                if (needBonusPt < 0) {
+                    isAdjustable = false;
+                    details.push({ label: "スコアボーナスP", value: "-" });
+                } else {
+                    if (liveMode === "free") {
+                        minScore = needBonusPt * 9750;
+                        maxScore = ((needBonusPt + 1) * 9750) - 1;
+                    } else {
+                        minScore = needBonusPt * 6500;
+                        maxScore = ((needBonusPt + 1) * 6500) - 1;
+                    }
+                    displayMin = minScore.toLocaleString();
+                    displayMax = maxScore.toLocaleString();
+                    details.push({ label: "スコアボーナスP", value: needBonusPt.toLocaleString() + " pts" });
+                }
+
+            } else if (eventType === "mission") {
+                const bonusPercent = parseInt(document.getElementById("event-bonus").value, 10) || 0;
+                const supportPower = parseInt(document.getElementById("mission-support").value, 10) || 0;
+                
+                const supportPt = Math.floor(supportPower / 3000);
+                const targetX = currentBase - supportPt;
+
+                let foundK = -1;
+                for (let k = 0; k <= 3000; k++) {
+                    if (k + Math.floor((k * bonusPercent) / 100) === targetX) {
+                        foundK = k;
+                        break;
+                    }
+                }
+
+                details.push({ label: "基本P", value: "120 pts" });
+
+                if (foundK < 120) {
+                    isAdjustable = false;
+                    details.push({ label: "スコアボーナスP", value: "-" });
+                    details.push({ label: "イベントボーナスP", value: "-" });
+                } else {
+                    let scoreBonusBase = foundK - 120;
+                    let dynamicBonus = Math.floor((foundK * bonusPercent) / 100);
+                    
+                    details.push({ label: "スコアボーナスP", value: scoreBonusBase.toLocaleString() + " pts" });
+                    details.push({ label: "イベントボーナスP", value: dynamicBonus.toLocaleString() + " pts" });
+
+                    minScore = scoreBonusBase * 15000;
+                    maxScore = (scoreBonusBase + 1) * 15000 - 1;
+                    
+                    displayMin = minScore.toLocaleString();
+                    displayMax = maxScore.toLocaleString();
+                }
+                details.push({ label: "サポートバンドP", value: supportPt.toLocaleString() + " pts" });
+
+            } else if (eventType === "try") {
+                const bonusPercent = parseInt(document.getElementById("event-bonus").value, 10) || 0;
+                let foundK = -1;
+                
+                for (let k = 0; k <= 3000; k++) {
+                    let total = Math.floor((130 + k) * (100 + bonusPercent) / 100);
+                    if (total === currentBase) {
+                        foundK = k;
+                        break;
+                    }
+                }
+
+                details.push({ label: "基本P", value: "130 pts" });
+
+                if (foundK < 0) {
+                    isAdjustable = false;
+                    details.push({ label: "スコアボーナスP", value: "-" });
+                    details.push({ label: "イベントボーナスP", value: "-" });
+                } else {
+                    details.push({ label: "スコアボーナスP", value: foundK.toLocaleString() + " pts" });
+                    details.push({ label: "イベントボーナスP", value: (currentBase - (130 + foundK)).toLocaleString() + " pts" });
+
+                    minScore = foundK * 26000;
+                    maxScore = (foundK + 1) * 26000 - 1;
+                    
+                    displayMin = minScore.toLocaleString();
+                    displayMax = maxScore.toLocaleString();
+                }
+
+            } else if (eventType === "challenge") {
+                if (liveMode === "free") {
+                    const bonusPercent = parseInt(document.getElementById("event-bonus").value, 10) || 0;
+                    let foundK = -1;
+                    for (let k = 0; k <= 3000; k++) {
+                        if (k + Math.floor((k * bonusPercent) / 100) === currentBase) {
+                            foundK = k;
+                            break;
+                        }
+                    }
+
+                    details.push({ label: "基本P", value: "70 pts" });
+
+                    if (foundK < 70) {
+                        isAdjustable = false;
+                        details.push({ label: "スコアボーナスP", value: "-" });
+                        details.push({ label: "イベントボーナスP", value: "-" });
+                    } else {
+                        let scoreBonusBase = foundK - 70;
+                        let dynamicBonus = Math.floor((foundK * bonusPercent) / 100);
+                        
+                        details.push({ label: "スコアボーナスP", value: scoreBonusBase.toLocaleString() + " pts" });
+                        details.push({ label: "イベントボーナスP", value: dynamicBonus.toLocaleString() + " pts" });
+
+                        minScore = scoreBonusBase * 50000;
+                        maxScore = (scoreBonusBase + 1) * 50000 - 1;
+                        
+                        displayMin = minScore.toLocaleString();
+                        displayMax = maxScore.toLocaleString();
+                    }
+                } else if (liveMode === "challenge_live") {
+                    let scoreBonusBase = currentBase - 3250;
+                    details.push({ label: "基本P", value: "3,250 pts" });
+
+                    if (scoreBonusBase < 0) {
+                        isAdjustable = false;
+                        details.push({ label: "スコアボーナスP", value: "-" });
+                    } else {
+                        details.push({ label: "スコアボーナスP", value: scoreBonusBase.toLocaleString() + " pts" });
+                        minScore = scoreBonusBase * 450;
+                        maxScore = (scoreBonusBase + 1) * 450 - 1;
+                        
+                        displayMin = minScore.toLocaleString();
+                        displayMax = maxScore.toLocaleString();
+                    }
+                }
+            } else if (eventType === "medley") {
+                // メドレーイベントの計算
+                const medleySongs = parseInt(document.getElementById("medley-songs").value, 10);
+                let basePt = 30; // 1曲
+                if (medleySongs === 2) basePt = 65;
+                if (medleySongs === 3) basePt = 100;
+                
+                details.push({ label: "基本P", value: basePt + " pts" });
+
+                let needBonusPt = currentBase - basePt;
+
+                if (needBonusPt < 0) {
+                    isAdjustable = false;
+                    details.push({ label: "スコアボーナスP", value: "-" });
+                } else {
+                    details.push({ label: "スコアボーナスP", value: needBonusPt.toLocaleString() + " pts" });
+
+                    // スコア ÷ 18500 = needBonusPt
+                    minScore = needBonusPt * 18500;
+                    maxScore = (needBonusPt + 1) * 18500 - 1;
+                    
+                    displayMin = minScore.toLocaleString();
+                    displayMax = maxScore.toLocaleString();
+                }
+            }
+
+            remainingPt -= currentTargetPt;
+
+            let detailsHTML = details.map(d => `<div class="card-row"><span>${d.label}</span><span>${d.value}</span></div>`).join('');
+            
+            let statusBadge = isAdjustable 
+                ? `<span class="status-ok">調整可能</span>` 
+                : `<span class="status-ng">調整不可</span>`;
+
+            cardsHTML += `
+                <div class="result-card">
+                    <div class="card-header">
+                        <span>#${i + 1} 獲得: ${currentTargetPt.toLocaleString()} pts</span>
+                        ${statusBadge}
+                    </div>
+                    <div class="card-row">
+                        <span style="font-weight: bold;">目標スコア${eventType === "medley" ? " (合計)" : ""}</span>
+                        <span style="font-weight: bold; color: #1e365c;">${displayMin} 〜 ${displayMax}</span>
+                    </div>
+                    
+                    <div class="card-details">
+                        <div style="font-size: 11px; color: #777; margin-bottom: 5px; border-bottom: 1px solid #ddd; padding-bottom: 3px;">
+                            ポイント内訳
+                        </div>
+                        ${detailsHTML}
+                    </div>
+
+                    <div class="card-row" style="margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 8px;">
+                        <span>残りポイント</span>
+                        <span class="highlight-pt">${remainingPt.toLocaleString()} pts</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        resultArea.style.display = "block";
+        resultArea.innerHTML = cardsHTML;
+    }
+</script>
+
+</body>
+</html>
